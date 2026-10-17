@@ -1,0 +1,88 @@
+Extended notes for therock on Slackware
+======================================
+
+This file contains additional build and runtime notes that do not
+fit in the main README. Read this if your build fails, your GPU
+compute is denied, or you are packaging/hosting binaries.
+
+
+Build environment notes
+-----------------------
+
+The TheRock tag tarball (TheRock-$VERSION.tar.gz) is only the
+bootstrap; the build system fetches the actual component sources
+itself. Full builds take hours to days depending on hardware.
+Plan disk accordingly: the source cache and build tree together
+can consume tens of gigabytes.
+
+The virtual environment used for TheRock's Python tooling is
+created inside the persistent source cache and never touches the
+system Python. Requirements are installed from the tag's own
+requirements.txt so version pins always match the tree being
+built.
+
+Rebuilding the same version is safe: upstream fetching resets
+component trees to pristine state. Do NOT hand-edit sources in
+the cache expecting edits to survive a re-run or version bump --
+they will not. Carry patches as a separate step after fetch.
+
+
+Device permissions and verification
+-----------------------------------
+
+On stock Slackware-current both /dev/kfd and /dev/dri/renderD*
+are created world read/write (0666):
+
+  crw-rw-rw- 1 root video 226, 128 ... /dev/dri/renderD128
+  crw-rw-rw- 1 root video  508,   0 ... /dev/kfd
+
+No group membership is required for GPU compute access. Expect
+one renderD node per display adapter -- CPUs with integrated
+graphics (AMD 7000/9000 series, most modern Intel) add a node.
+
+If your system is hardened and these nodes are 0660:
+
+  # usermod -aG video yourusername
+
+then log out and back in. Slackware has no 'render' group; for a
+dedicated compute group instead of video:
+
+  # groupadd -r render
+  # echo 'KERNEL=="kfd", GROUP="render", MODE="0660"' \
+      > /etc/udev/rules.d/70-kfd.rules
+  # udevadm trigger --name-match=kfd
+  # usermod -aG render yourusername
+
+Remember: group changes do not affect running sessions. Log out
+and back in before retesting.
+
+
+Troubleshooting
+---------------
+
+* rocminfo fails mentioning 'kfd':
+  Check device permissions first (above). This is the most common
+  first-contact failure and almost always permissions.
+
+* Integrated GPUs (AMD Ryzen 7000/9000 iGPUs) appear in rocminfo:
+  These are enumerated but not ROCm-supported for compute. This is
+  normal and harmless.
+
+* Workloads run on the wrong GPU:
+  Device enumeration order is not guaranteed. Restrict with
+  HIP_VISIBLE_DEVICES=0 or ROCR_VISIBLE_DEVICES set to the GPU
+  UUID.
+
+
+Credits
+-------
+
+This project stands on the shoulders of Condor and his
+ROCm-for-Slackware build scripts, which proved ROCm belonged on
+Slackware at all, and established practices (persistent source
+trees, delta fetching) carried forward here. His prebuilt
+packages served Slackware users before TheRock existed.
+
+Additionally, thanks to the upstream TheRock project and AMD for
+making ROCm's build process a single coherent, buildable entity
+rather than a pile of independent shell scripts.

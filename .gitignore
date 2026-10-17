@@ -1,0 +1,19 @@
+# TheRock tag tarballs (large, regenerable from GitHub)
+TheRock-*.tar.gz
+
+# Built packages
+*.tgz
+*.txz
+
+# Scratch from testing SlackBuilds
+/*.log
+
+# Editor droppings
+*.swp
+*~
+.idea/
+.vscode/
+
+# Never commit the source cache contents if anyone mistakes this
+# for the right place to symlink it
+therock-*/

@@ -1,0 +1,56 @@
+therock (The HIP Environment and ROCm Kit) for Slackware
+
+This builds AMD's ROCm platform for Slackware-current via TheRock,
+AMD's open source build and release system for HIP and ROCm. Since
+ROCm 7.14, ROCm is built and released through TheRock; this script
+wraps that build into a proper Slackware package installing under
+/opt/rocm.
+
+The result is similar in spirit to the excellent ROCm-for-Slackware
+scripts by Condor, whose work made ROCm buildable on Slackware
+in the first place.
+
+IMPORTANT: THIS SCRIPT REQUIRES NETWORK ACCESS WHILE RUNNING.
+TheRock downloads component sources, toolchains, and dependency
+archives from the internet at build time. This script is NOT
+suitable for air-gapped or restricted machines. Sources are cached
+persistently in $SRC_CACHE (default ~/.cache/therock-src) so
+subsequent builds and version bumps fetch only deltas.
+
+REQUIREMENTS
+  git-lfs is a HARD REQUIREMENT.  After installing git-lfs,
+  run 'git lfs install' once as the user
+  running the build (one-time global git config setup).
+
+USAGE
+  Default build targets gfx120X-dgpu (RDNA4 discrete GPUs,
+  including the RX 9070 XT). To target another GPU family:
+
+    GPU_FAMILIES="gfx110X-dgpu" ./therock.SlackBuild
+
+  Multiple families are semicolon-separated and quoted:
+
+    GPU_FAMILIES="gfx103X-dgpu;gfx110X-dgpu" ./therock.SlackBuild
+
+  Valid family names are listed in therock_amdgpu_targets.cmake in
+  the source tree.
+
+  See https://rocm.docs.amd.com/en/latest/reference/gpu-specs.html
+
+OPTIONAL BUILD ACCELERATION
+  Rebuilds and version bumps benefit from ccache:
+
+    USE_CCACHE=yes ./therock.SlackBuild
+
+  Requires ccache from SBo. The cache persists alongside the source
+  cache. Note: first builds are cache-cold; benefits appear from
+  the second build onward.
+
+RUNTIME PERMISSIONS
+  On stock Slackware-current, /dev/kfd and /dev/dri/renderD* are
+  created world read/write (0666), so no group membership is
+  required for GPU compute access. If your system tightens these,
+  see README.SBo.
+
+See README.SBo for extended instructions, permissions detail, and
+troubleshooting.
