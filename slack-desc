@@ -1,0 +1,11 @@
+therock: therock (The HIP Environment and ROCm Kit)
+therock:
+therock: TheRock is the open source build and release system for HIP and ROCm,
+therock: integrating ROCm's components into a single buildable, testable, and
+therock: releasable product. Since ROCm 7.14, ROCm is built and released
+therock: through TheRock.
+therock:
+therock: This package installs a GPU-family-targeted ROCm distribution under
+therock: /opt/rocm. Built for: default gfx120X-dgpu (override via GPU_FAMILIES).
+therock:
+therock: https://github.com/ROCm/TheRock

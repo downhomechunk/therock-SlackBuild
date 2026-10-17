@@ -1,0 +1,175 @@
+#!/bin/sh
+
+# therock.SlackBuild
+# Builds TheRock (the HIP Environment and ROCm Kit) for Slackware-current.
+#
+# NOTE: This script REQUIRES NETWORK ACCESS while running. TheRock downloads
+# component sources, toolchains, and dependency archives from the internet at
+# build time. Sources are cached persistently in $SRC_CACHE so subsequent
+# builds only fetch deltas. Do NOT run on air-gapped or restricted machines.
+#
+# Target GPU family selection:
+#   GPU_FAMILIES="gfx120X-dgpu" ./therock.SlackBuild        (default: RDNA4 dgpu)
+# Multiple families, semicolon-separated and quoted:
+#   GPU_FAMILIES="gfx103X-dgpu;gfx110X-dgpu" ./therock.SlackBuild
+# Valid families are defined in therock_amdgpu_targets.cmake in the tree.
+# The version.json in the tree reports the ROCm payload version (rocm-version),
+# which may differ from the TheRock tag: verify the tag against
+# https://github.com/ROCm/TheRock/releases
+#
+# Optional ccache acceleration (requires ccache from SBo):
+#   USE_CCACHE=yes ./therock.SlackBuild
+#
+# Prerequisites (not built by this script):
+#   cmake, ninja, git, git-lfs, patchelf, python3
+# All expected to be present on Slackware-current or via SBo.
+#
+# Maintained by downhomechunk.
+
+PRGNAM=therock
+VERSION=${VERSION:-10.2.0}   # VERIFY: TheRock tag matching your tarball
+BUILD=${BUILD:-1}
+TAG=${TAG:-_dhc}
+
+if [ -z "$ARCH" ]; then
+  case "$( uname -m )" in
+    i?86) ARCH=i586 ;;
+    arm*) ARCH=arm ;;
+       *) ARCH=x86_64 ;;
+  esac
+fi
+
+# GPU family: default gfx120X-dgpu (RDNA4 discrete; covers the RX 9070 XT /
+# gfx1201). Confirm the exact family string in therock_amdgpu_targets.cmake.
+GPU_FAMILIES=${GPU_FAMILIES:-gfx120X-dgpu}
+# Persistent source cache: survives builds so we fetch deltas, not the world.
+SRC_CACHE=${SRC_CACHE:-$HOME/.cache/therock-src}
+NUMJOBS=${NUMJOBS:-" -j $(nproc) "}
+
+# Optional ccache acceleration: LO-style opt-in, off unless asked for.
+use_ccache="" ; [ "${USE_CCACHE:-no}" != "no" ] && use_ccache="yes"
+
+CWD=$(pwd)
+TMP=${TMP:-/tmp}
+PKG=$TMP/package-$PRGNAM
+OUTPUT=${OUTPUT:-/tmp}
+
+set -e
+
+# ---------------------------------------------------------------------------
+# Sanity checks -- fail loud and early, not 40 hours into a build.
+# ---------------------------------------------------------------------------
+sanity_fail() {
+  echo "*** ERROR: required tool '$1' not found in PATH." >&2
+  echo "***        Install it (current tree or SBo) and rerun." >&2
+  exit 1
+}
+
+for tool in cmake ninja git git-lfs patchelf python3 ctest; do
+  command -v "$tool" >/dev/null 2>&1 || sanity_fail "$tool"
+done
+
+# ccache: accelerator, not a dependency. Warn and continue without it.
+if [ "$use_ccache" = "yes" ] && ! command -v ccache >/dev/null 2>&1 ; then
+  echo "*** WARNING: USE_CCACHE set but ccache not found in PATH." >&2
+  echo "***          Building without ccache." >&2
+  sleep 3
+  use_ccache=""
+fi
+
+ccache_launcher=""
+if [ "$use_ccache" = "yes" ]; then
+  # BASEDIR/NOHASHDIR/SLOPPINESS are load-bearing: TheRock's fetched clang
+  # lives at paths inside $SRC_CACHE/$TMP, and without these ccache treats
+  # every differing absolute path as a new compile and never hits.
+  export CCACHE_DIR=$SRC_CACHE/ccache
+  export CCACHE_BASEDIR=$SRC_CACHE
+  export CCACHE_NOHASHDIR=true
+  export CCACHE_SLOPPINESS="include_file_ctime,include_file_mtime,file_macro,time_macros"
+  ccache_launcher="-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache"
+  echo "=> ccache enabled (cache: $CCACHE_DIR)"
+fi
+
+echo "=> Target GPU families: $GPU_FAMILIES"
+echo "=> Persistent source cache: $SRC_CACHE"
+echo "=> This script WILL contact the internet to fetch sources."
+
+rm -rf "$PKG"
+mkdir -p "$TMP" "$PKG" "$OUTPUT" "$SRC_CACHE"
+
+# ---------------------------------------------------------------------------
+# Source: the TheRock tag tarball is only the launcher. The build system
+# fetches the actual component trees itself, into a persistent workdir.
+# ---------------------------------------------------------------------------
+cd "$TMP"
+rm -rf TheRock-$VERSION
+tar xvf "$CWD/TheRock-$VERSION.tar.gz"
+if [ -f "TheRock-$VERSION/version.json" ]; then
+  echo "=> Payload version reported by tree:"
+  grep -E 'rocm-version' "TheRock-$VERSION/version.json"
+fi
+mv TheRock-$VERSION "$SRC_CACHE/therock-$VERSION"
+cd "$SRC_CACHE/therock-$VERSION"
+
+# Reuse a venv across builds (it lives in the cache, not on the system).
+# Pip installs from the tree's own requirements.txt so pins always match the
+# tag being built -- never point pip at main.
+if [ ! -x ".venv/bin/python" ]; then
+  python3 -m venv .venv
+fi
+# shellcheck disable=SC1091
+. .venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+
+# ---------------------------------------------------------------------------
+# Configure
+# ---------------------------------------------------------------------------
+cmake -B build -GNinja \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DTHEROCK_AMDGPU_FAMILIES="$GPU_FAMILIES" \
+  -DTHEROCK_AMDGPU_DIST_BUNDLE_NAME="$( echo "$GPU_FAMILIES" | tr ';' '-' )" \
+  $ccache_launcher
+
+# ---------------------------------------------------------------------------
+# Build: therock-dist produces the relocatable distribution
+# ---------------------------------------------------------------------------
+cmake --build build --target therock-dist $NUMJOBS
+
+if [ ! -d build/dist ]; then
+  echo "*** ERROR: build/dist missing after build; something went wrong." >&2
+  exit 1
+fi
+
+# ---------------------------------------------------------------------------
+# Stage into package root: TheRock dist is self-contained -> /opt/rocm
+# (matching upstream convention and AMD's own install location)
+# ---------------------------------------------------------------------------
+mkdir -p "$PKG/opt/rocm"
+cp -a build/dist/. "$PKG/opt/rocm/"
+
+# Ownership and permissions. No aggressive stripping: ROCm ships prebuilt
+# objects/kpacks where strip can do more harm than good.
+chown -R root:root "$PKG"
+find "$PKG" -type d -exec chmod 755 {} \;
+find "$PKG" -type f -perm -u+w -exec chmod 644 {} \;
+chmod 755 "$PKG"/opt/rocm/bin/* 2>/dev/null || true
+
+# Runtime integration pieces
+mkdir -p "$PKG/etc/ld.so.conf.d" "$PKG/etc/profile.d"
+cat "$CWD/rocm.conf" > "$PKG/etc/ld.so.conf.d/rocm.conf.new"
+cat "$CWD/rocm.sh"   > "$PKG/etc/profile.d/rocm.sh.new"
+cat "$CWD/rocm.csh"  > "$PKG/etc/profile.d/rocm.csh.new"
+
+mkdir -p "$PKG/install"
+cat "$CWD/slack-desc" > "$PKG/install/slack-desc"
+cat "$CWD/doinst.sh"  > "$PKG/install/doinst.sh"
+
+# Sanity-check the package isn't somehow empty
+if [ -z "$( ls -A "$PKG/opt/rocm" )" ]; then
+  echo "*** ERROR: staged /opt/rocm is empty; refusing to package nothing." >&2
+  exit 1
+fi
+
+cd "$PKG"
+/sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$TAG.txz"
