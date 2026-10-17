@@ -23,17 +23,16 @@ REQUIREMENTS
   running the build (one-time global git config setup).
 
 USAGE
-  Default build targets gfx120X-dgpu (RDNA4 discrete GPUs,
-  including the RX 9070 XT). To target another GPU family:
+  Default build targets gfx120X-all (RDNA4: gfx1200 + gfx1201),
+  covering the RX 9060 / 9070 series and Radeon AI PRO R9700.
+  To target an exact architecture only:
 
-    GPU_FAMILIES="gfx110X-dgpu" ./therock.SlackBuild
+    GPU_FAMILIES=gfx1201 ./therock.SlackBuild   (9070 / 9070 XT)
+    GPU_FAMILIES=gfx1200 ./therock.SlackBuild   (9060 / 9060 XT)
 
   Multiple families are semicolon-separated and quoted:
 
-    GPU_FAMILIES="gfx103X-dgpu;gfx110X-dgpu" ./therock.SlackBuild
-
-  Valid family names are listed in therock_amdgpu_targets.cmake in
-  the source tree.
+    GPU_FAMILIES="gfx103X-dgpu;gfx110X-all" ./therock.SlackBuild
 
   See https://rocm.docs.amd.com/en/latest/reference/gpu-specs.html
 

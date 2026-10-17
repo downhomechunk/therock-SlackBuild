@@ -117,19 +117,25 @@ mkdir -p $TMP $PKG $OUTPUT $SRC_CACHE
 # On reruns, the cached tree is reused (fetch_sources.py will sync deltas),
 # so we only extract+migrate on a cold cache.
 # ---------------------------------------------------------------------------
+
 if [ ! -d $SRC_CACHE/therock-$VERSION ]; then
   cd $TMP
   rm -rf $SRCNAME-$PRGNAM-$VERSION
   # NOTE: tarball name is taken verbatim from GitHub's tag archive naming
   # (repo 'TheRock', tag 'therock-X.Y'); do not rename before extracting.
   tar xvf $CWD/$SRCNAME-$PRGNAM-$VERSION.tar.gz --no-same-owner
-
-  if [ -f "$SRCNAME-$PRGNAM-$VERSION/version.json" ]; then
-    echo "=> Payload version reported by tree:"
-    grep -E 'rocm-version' "$SRCNAME-$PRGNAM-$VERSION/version.json"
-  fi
-
+  cd $SRCNAME-$PRGNAM-$VERSION
+  # fetch_sources.py drives `git submodule update` on the root repo,
+  # which requires a real git checkout: a tag tarball has no .git.
+  # Graft git metadata by fetching the matching tag (shallow) and
+  # resetting the tree to it, so submodules resolve.
+  git init
+  git remote add origin https://github.com/ROCm/TheRock.git
+  git fetch --depth 1 origin "refs/tags/therock-$VERSION:refs/tags/therock-$VERSION"
+  git reset --hard therock-$VERSION
+  cd $TMP
   mv $SRCNAME-$PRGNAM-$VERSION $SRC_CACHE/therock-$VERSION
+
 else
   echo "=> Reusing cached tree: $SRC_CACHE/therock-$VERSION"
   if [ -f "$SRC_CACHE/therock-$VERSION/version.json" ]; then
