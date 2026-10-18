@@ -49,7 +49,13 @@ fi
 # world. /var/cache is the FHS location for regenerable persistent data;
 # fully reclaimable with 'rm -rf /var/cache/therock'.
 SRC_CACHE=${SRC_CACHE:-/var/cache/therock}
-NUMJOBS=${NUMJOBS:-" -j $(nproc) "}
+
+# Parallelism: JOBS controls the outer build graph (-j) AND, via
+# CMAKE_BUILD_PARALLEL_LEVEL, the inner per-subproject cmake --build
+# invocations, which otherwise default to all cores regardless of -j.
+JOBS=${JOBS:-$(nproc)}
+NUMJOBS=" -j $JOBS "
+export CMAKE_BUILD_PARALLEL_LEVEL=$JOBS
 
 # Default GPU family is gfx120X-all (RDNA4: gfx1200 + gfx1201, covering the
 # RX 9060 series, RX 9070 series, and Radeon AI PRO R9700). Choose
@@ -163,6 +169,15 @@ pip install -r requirements.txt
 # ---------------------------------------------------------------------------
 python build_tools/fetch_sources.py
 
+# TheRock's FindLibva modules restrict discovery to TheRock's own sysdeps
+# paths (NO_DEFAULT_PATH), which makes them blind to a system libva in
+# standard locations like /usr/lib64. Let the standard CMake search see it.
+for _findmod in \
+  $SRC_CACHE/therock-$VERSION/rocm-systems/projects/rocjpeg/cmake/FindLibva.cmake \
+  $SRC_CACHE/therock-$VERSION/rocm-systems/projects/rocdecode/cmake/FindLibva.cmake ; do
+  sed -i 's/ NO_DEFAULT_PATH//' $_findmod
+done
+
 # ---------------------------------------------------------------------------
 # Configure
 # Note: SLKCFLAGS/CMAKE_*_FLAGS_RELEASE overrides are deliberately not used.
@@ -173,7 +188,9 @@ python build_tools/fetch_sources.py
 cmake -B build -GNinja \
   -DCMAKE_BUILD_TYPE=Release \
   -DTHEROCK_AMDGPU_FAMILIES="$GPU_FAMILIES" \
-  -DTHEROCK_AMDGPU_DIST_BUNDLE_NAME="$( echo "$GPU_FAMILIES" | tr ';' '-' )" \
+  -DTHEROCK_AMDGPU_DIST_BUNDLE_NAME="..." \
+  -DFLANG_PARALLEL_COMPILE_JOBS=${FLANG_JOBS:-4} \
+  -DLLVM_PARALLEL_LINK_JOBS=${LINK_JOBS:-2} \
   $ccache_launcher
 
 # ---------------------------------------------------------------------------
