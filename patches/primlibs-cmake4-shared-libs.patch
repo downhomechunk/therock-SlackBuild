@@ -1,0 +1,9 @@
+diff --git a/cmake/therock_primlibs_benchmark_deps.cmake b/cmake/therock_primlibs_benchmark_deps.cmake
+index 925fc0f..101ac1e 100644
+--- a/cmake/therock_primlibs_benchmark_deps.cmake
++++ b/cmake/therock_primlibs_benchmark_deps.cmake
+@@ -1,3 +1,4 @@
++set_property(GLOBAL PROPERTY TARGET_SUPPORTS_SHARED_LIBS TRUE)
+ # Copyright Advanced Micro Devices, Inc.
+ # SPDX-License-Identifier: MIT
+ 

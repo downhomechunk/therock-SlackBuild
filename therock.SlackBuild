@@ -53,7 +53,7 @@ SRC_CACHE=${SRC_CACHE:-/var/cache/therock}
 # Parallelism: JOBS controls the outer build graph (-j) AND, via
 # CMAKE_BUILD_PARALLEL_LEVEL, the inner per-subproject cmake --build
 # invocations, which otherwise default to all cores regardless of -j.
-JOBS=${JOBS:-$(nproc)}
+JOBS=${JOBS:-8}
 NUMJOBS=" -j $JOBS "
 export CMAKE_BUILD_PARALLEL_LEVEL=$JOBS
 
@@ -169,14 +169,35 @@ pip install -r requirements.txt
 # ---------------------------------------------------------------------------
 python build_tools/fetch_sources.py
 
-# TheRock's FindLibva modules restrict discovery to TheRock's own sysdeps
-# paths (NO_DEFAULT_PATH), which makes them blind to a system libva in
-# standard locations like /usr/lib64. Let the standard CMake search see it.
-for _findmod in \
-  $SRC_CACHE/therock-$VERSION/rocm-systems/projects/rocjpeg/cmake/FindLibva.cmake \
-  $SRC_CACHE/therock-$VERSION/rocm-systems/projects/rocdecode/cmake/FindLibva.cmake ; do
-  sed -i 's/ NO_DEFAULT_PATH//' $_findmod
+# Apply patch scripts. Idempotency is each script's responsibility
+# (guard + verify + die-loudly pattern -- see individual scripts).
+# Routing convention: script filename suffix names the target tree
+# (e.g. *.rocm-systems.sh -> $SRC_CACHE/therock-$VERSION/rocm-systems),
+# but scripts self-route via hardcoded _root today; suffix is
+# documentation until a shared dispatcher exists.
+export SRC_CACHE VERSION
+for _p in $CWD/patches/*.sh; do
+  echo "=> Applying $(basename $_p)"
+  sh "$_p"
 done
+
+# rocm-systems#12596: HIP host_defines.h defines __noinline__ as an empty
+# macro for host compilers; libstdc++ 16 uses it as an attribute name
+# ([[__gnu__::__noinline__]]), breaking <format>/<chrono>. Delete the empty
+# host-side define from ALL copies, including build-tree copies a warm
+# cache already contains (a source patch alone won't fix staged headers;
+# this is why this fix is a sed and not a patch file).
+for f in $(find "$SRC_CACHE/therock-$VERSION" -name host_defines.h -path '*amd_detail*'); do
+  sed -i '/^#define __noinline__$/d' "$f"
+done
+# Assertion: if the bare define survived the sweep, stop -- a hipfile
+# build that proceeds past this point will fail with a confusing
+# 'expected identifier' in <format> that points at libstdc++, not at us.
+if grep -rq '^#define __noinline__$' --include=host_defines.h \
+     "$SRC_CACHE/therock-$VERSION" ; then
+  echo "*** ERROR: bare __noinline__ define survived patching." >&2
+  exit 1
+fi
 
 # ---------------------------------------------------------------------------
 # Configure
@@ -188,7 +209,7 @@ done
 cmake -B build -GNinja \
   -DCMAKE_BUILD_TYPE=Release \
   -DTHEROCK_AMDGPU_FAMILIES="$GPU_FAMILIES" \
-  -DTHEROCK_AMDGPU_DIST_BUNDLE_NAME="..." \
+  -DTHEROCK_AMDGPU_DIST_BUNDLE_NAME="$(echo "$GPU_FAMILIES" | tr ';' '-')" \
   -DFLANG_PARALLEL_COMPILE_JOBS=${FLANG_JOBS:-4} \
   -DLLVM_PARALLEL_LINK_JOBS=${LINK_JOBS:-2} \
   $ccache_launcher
@@ -216,7 +237,15 @@ cp -a build/dist/. $PKG/opt/rocm/
 # divergence from the template.
 chown -R root:root $PKG
 find $PKG -type d -exec chmod 755 {} \;
-find $PKG -type f -perm -u+w -exec chmod 644 {} \;
+
+# Normalize file permissions without guessing what AMD intended to be
+# executable: preserve the exec bit where the build system set it, and
+# demote only non-executable writable files. The blanket 644 pass the
+# template uses would flatten shebang'd helper scripts living outside
+# bin/ (libexec helpers, *.py wrappers invoked by path).
+find $PKG -type f -perm /111 -exec chmod 755 {} \;
+find $PKG -type f ! -perm /111 -exec chmod 644 {} \;
+
 chmod 755 $PKG/opt/rocm/bin/* 2>/dev/null || true
 
 # Compress man pages if the dist shipped any (under its own prefix)
