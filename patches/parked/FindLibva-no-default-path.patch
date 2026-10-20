@@ -1,0 +1,34 @@
+diff --git a/projects/rocdecode/cmake/FindLibva.cmake b/projects/rocdecode/cmake/FindLibva.cmake
+index 4693d37b82..0d9e6974eb 100644
+--- a/projects/rocdecode/cmake/FindLibva.cmake
++++ b/projects/rocdecode/cmake/FindLibva.cmake
+@@ -27,9 +27,9 @@ if(DEFINED THEROCK_SUPERPROJECT_INCLUDE_DIRS)
+   list(APPEND _libva_library_hints ${CMAKE_LIBRARY_PATH})
+ endif()
+ 
+-find_library(LIBVA_LIBRARY NAMES va HINTS ${_libva_library_hints} ${ROCM_PATH}/lib/rocm_sysdeps/lib NO_DEFAULT_PATH)
+-find_library(LIBVA_DRM_LIBRARY NAMES va-drm HINTS ${_libva_library_hints} ${ROCM_PATH}/lib/rocm_sysdeps/lib NO_DEFAULT_PATH)
+-find_path(LIBVA_INCLUDE_DIR NAMES va/va.h PATHS ${_libva_include_hints} ${ROCM_PATH}/lib/rocm_sysdeps/include NO_DEFAULT_PATH)
++find_library(LIBVA_LIBRARY NAMES va HINTS ${_libva_library_hints} ${ROCM_PATH}/lib/rocm_sysdeps/lib)
++find_library(LIBVA_DRM_LIBRARY NAMES va-drm HINTS ${_libva_library_hints} ${ROCM_PATH}/lib/rocm_sysdeps/lib)
++find_path(LIBVA_INCLUDE_DIR NAMES va/va.h PATHS ${_libva_include_hints} ${ROCM_PATH}/lib/rocm_sysdeps/include)
+ 
+ include(FindPackageHandleStandardArgs)
+ find_package_handle_standard_args(Libva DEFAULT_MSG LIBVA_INCLUDE_DIR LIBVA_LIBRARY LIBVA_DRM_LIBRARY)
+diff --git a/projects/rocjpeg/cmake/FindLibva.cmake b/projects/rocjpeg/cmake/FindLibva.cmake
+index 6102886901..ef71981ad7 100644
+--- a/projects/rocjpeg/cmake/FindLibva.cmake
++++ b/projects/rocjpeg/cmake/FindLibva.cmake
+@@ -27,9 +27,9 @@ if(DEFINED THEROCK_SUPERPROJECT_INCLUDE_DIRS)
+   list(APPEND _libva_library_hints ${CMAKE_LIBRARY_PATH})
+ endif()
+ 
+-find_library(LIBVA_LIBRARY NAMES va HINTS ${_libva_library_hints} ${ROCM_PATH}/lib/rocm_sysdeps/lib NO_DEFAULT_PATH)
+-find_library(LIBVA_DRM_LIBRARY NAMES va-drm HINTS ${_libva_library_hints} ${ROCM_PATH}/lib/rocm_sysdeps/lib NO_DEFAULT_PATH)
+-find_path(LIBVA_INCLUDE_DIR NAMES va/va.h PATHS ${_libva_include_hints} ${ROCM_PATH}/lib/rocm_sysdeps/include NO_DEFAULT_PATH)
++find_library(LIBVA_LIBRARY NAMES va HINTS ${_libva_library_hints} ${ROCM_PATH}/lib/rocm_sysdeps/lib)
++find_library(LIBVA_DRM_LIBRARY NAMES va-drm HINTS ${_libva_library_hints} ${ROCM_PATH}/lib/rocm_sysdeps/lib)
++find_path(LIBVA_INCLUDE_DIR NAMES va/va.h PATHS ${_libva_include_hints} ${ROCM_PATH}/lib/rocm_sysdeps/include)
+ 
+ include(FindPackageHandleStandardArgs)
+ find_package_handle_standard_args(Libva DEFAULT_MSG LIBVA_INCLUDE_DIR LIBVA_LIBRARY LIBVA_DRM_LIBRARY)
