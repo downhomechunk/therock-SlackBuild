@@ -17,3 +17,6 @@ TheRock-*.tar.gz
 # Never commit the source cache contents if anyone mistakes this
 # for the right place to symlink it
 therock-*/
+
+# Working papers: failure notes, resume logs, validation transcripts
+/attic/
