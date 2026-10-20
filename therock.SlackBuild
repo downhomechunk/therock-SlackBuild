@@ -258,9 +258,9 @@ fi
 
 # Runtime integration pieces
 mkdir -p $PKG/etc/ld.so.conf.d $PKG/etc/profile.d
-cat $CWD/rocm.conf > $PKG/etc/ld.so.conf.d/rocm.conf.new
-cat $CWD/rocm.sh   > $PKG/etc/profile.d/rocm.sh.new
-cat $CWD/rocm.csh  > $PKG/etc/profile.d/rocm.csh.new
+cat $CWD/env/rocm.conf > $PKG/etc/ld.so.conf.d/rocm.conf.new
+cat $CWD/env/rocm.sh   > $PKG/etc/profile.d/rocm.sh.new
+cat $CWD/env/rocm.csh  > $PKG/etc/profile.d/rocm.csh.new
 
 # profile.d scripts are only sourced when executable (both /etc/profile
 # and /etc/csh.login gate on -x). The generic 644 normalization pass
