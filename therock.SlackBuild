@@ -154,6 +154,8 @@ cd $SRC_CACHE/therock-$VERSION
 # Reuse a venv across builds (it lives in the cache, not on the system).
 # Pip installs from the tree's own requirements.txt so pins always match
 # the tag being built -- never point pip at main.
+unset PYTHONPATH
+export PYTHONNOUSERSITE=1   # blind ~/.local pickups for this build
 if [ ! -x ".venv/bin/python" ]; then
   python3 -m venv .venv
 fi
@@ -161,6 +163,24 @@ fi
 . .venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
+
+if [ -d "$SRC_CACHE/therock-$VERSION/rocm-systems/.git" ]; then
+  _tree="$SRC_CACHE/therock-$VERSION/rocm-systems"
+  # TheRock's fetch layer arms skip-worktree bits on managed files,
+  # which blinds git status AND makes checkout a silent no-op. Clear
+  # them first, or the revert+check below will lie about tree state.
+  git -C "$_tree" ls-files -v | grep '^[a-z]' | cut -c3- | \
+    xargs -r git -C "$_tree" update-index --no-skip-worktree
+  git -C "$_tree" checkout -- .
+  if [ -n "$(git -C "$_tree" status --porcelain)" ]; then
+    echo "*** ERROR: cached rocm-systems diverges from tag $VERSION" >&2
+    echo "***        in ways checkout cannot repair (untracked files?):" >&2
+    git -C "$_tree" status --porcelain >&2
+    echo "*** Refusing to build. Remove the tree to refetch:" >&2
+    echo "***   rm -rf $SRC_CACHE/therock-$VERSION/rocm-systems" >&2
+    exit 1
+  fi
+fi
 
 # ---------------------------------------------------------------------------
 # Fetch/sync TheRock component sources (amd-llvm, rocm-libraries,
@@ -206,11 +226,14 @@ fi
 # global optimization flags risks perturbing ROCm math libraries that
 # assert their own flag recipes. The superbuild owns its own flags.
 # ---------------------------------------------------------------------------
+
 cmake -B build -GNinja \
   -DCMAKE_BUILD_TYPE=Release \
   -DTHEROCK_AMDGPU_FAMILIES="$GPU_FAMILIES" \
   -DTHEROCK_AMDGPU_DIST_BUNDLE_NAME="$(echo "$GPU_FAMILIES" | tr ';' '-')" \
-  -DFLANG_PARALLEL_COMPILE_JOBS=${FLANG_JOBS:-4} \
+  -DTHEROCK_ENABLE_EMULATION=OFF \
+  -DTHEROCK_ENABLE_ROCJITSU_HOTSWAP=OFF \  
+  -DFLANG_PARALLEL_COMPILE_JOBS=${FLANG_JOBS:-8} \
   -DLLVM_PARALLEL_LINK_JOBS=${LINK_JOBS:-2} \
   $ccache_launcher
 
