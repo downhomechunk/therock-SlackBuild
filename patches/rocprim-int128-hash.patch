@@ -1,0 +1,22 @@
+--- a/projects/rocprim/test/rocprim/test_device_segmented_topk.cpp
++++ b/projects/rocprim/test/rocprim/test_device_segmented_topk.cpp
+@@ -95,22 +95,6 @@ namespace {
+-struct hash<rocprim::int128_t>
+-{
+-    size_t operator()(rocprim::int128_t const& key) const
+-    {
+-        return std::hash<unsigned __int128>()(key.upper) ^ std::hash<unsigned __int128>()(key.lower);
+-    }
+-};
+-
+-struct hash<rocprim::uint128_t>
+-{
+-    size_t operator()(rocprim::uint128_t const& key) const
+-    {
+-        return std::hash<unsigned __int128>()(key.upper) ^ std::hash<unsigned __int128>()(key.lower);
+-    }
+-};
+-
+ } // anonymous namespace
+ 
+ namespace rocprim
