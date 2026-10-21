@@ -20,3 +20,6 @@ therock-*/
 
 # Working papers: failure notes, resume logs, validation transcripts
 /attic/
+attic/fail*.log
+*.so
+*.a
