@@ -16,7 +16,7 @@ perl -pi -e '\''
   if (/^-DROCPROFSYS_BUILD_FMT=OFF/) {
     print "      -Dfmt_DIR=${SRC_CACHE}/therock-${VERSION}/build/third-party/fmt/dist/lib/cmake/fmt\n"
   }
-'\'' "$_f"
+'\'' "$_f"'
 
 grep fmt_DIR "$_f" > /dev/null || {
   echo "*** ERROR: fmt_DIR injection failed." >&2; exit 1;
