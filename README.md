@@ -151,7 +151,5 @@ build process a single coherent, buildable entity rather than a pile of
 independent shell scripts.
 
 - - -
-**James Halloran, Chicago — 2026**
-
 *For the love of open source and the pain of recompiling everything.*
 
