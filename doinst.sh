@@ -10,7 +10,6 @@ config() {
 
 config etc/ld.so.conf.d/rocm.conf.new
 config etc/profile.d/rocm.sh.new
-config etc/profile.d/rocm.csh.new
 
 # Only meaningful once rocm.conf has landed under its real name:
 if [ -x /sbin/ldconfig ]; then
