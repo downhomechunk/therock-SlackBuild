@@ -209,8 +209,11 @@ done
 # cache already contains (a source patch alone won't fix staged headers;
 # this is why this fix is a sed and not a patch file).
 for f in $(find "$SRC_CACHE/therock-$VERSION" -name host_defines.h -path '*amd_detail*'); do
-  sed -i '/^#define __noinline__$/d' "$f"
+  if grep -q '^#define __noinline__$' "$f"; then
+    sed -i '/^#define __noinline__$/d' "$f"
+  fi
 done
+
 # Assertion: if the bare define survived the sweep, stop -- a hipfile
 # build that proceeds past this point will fail with a confusing
 # 'expected identifier' in <format> that points at libstdc++, not at us.
@@ -331,7 +334,7 @@ check_payload() {
     lib/libhsa-runtime64.so.1 \
     lib/librccl.so.1 \
     bin/hipcc \
-    bin/rocm-smi \
+    bin/amd-smi \
     bin/rocminfo \
     lib/llvm/bin/clang \
     include/hip/hip_runtime.h
