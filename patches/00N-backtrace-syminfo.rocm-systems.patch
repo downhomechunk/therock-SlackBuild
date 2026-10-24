@@ -1,0 +1,26 @@
+diff --git a/projects/rocprofiler/src/utils/helper.cpp b/projects/rocprofiler/src/utils/helper.cpp
+index 60e5fdaf96..d43136daf4 100644
+--- a/projects/rocprofiler/src/utils/helper.cpp
++++ b/projects/rocprofiler/src/utils/helper.cpp
+@@ -59,7 +59,7 @@ void errorCallback(void* data, const char* message, int errnum) {
+ }
+ 
+ void syminfoCallback(void* data, uintptr_t /* pc  */, const char* symname, uintptr_t /* symval  */,
+-                     uintptr_t /* symsize  */) {
++                     uintptr_t /* symsize  */, const char* /* binary_filename  */, uintptr_t /* base_address  */) {
+   BackTraceInfo* info = static_cast<BackTraceInfo*>(data);
+ 
+   if (symname == nullptr) return;
+diff --git a/projects/roctracer/src/util/debug.cpp b/projects/roctracer/src/util/debug.cpp
+index 9d5ec3b2b7..d0a39b77ee 100644
+--- a/projects/roctracer/src/util/debug.cpp
++++ b/projects/roctracer/src/util/debug.cpp
+@@ -48,7 +48,7 @@ void errorCallback(void* data, const char* message, int errnum) {
+ }
+ 
+ void syminfoCallback(void* data, uintptr_t /* pc  */, const char* symname, uintptr_t /* symval  */,
+-                     uintptr_t /* symsize  */) {
++                     uintptr_t /* symsize  */, const char* /* binary_filename  */, uintptr_t /* base_address  */) {
+   BackTraceInfo* info = static_cast<BackTraceInfo*>(data);
+ 
+   if (symname == nullptr) return;
