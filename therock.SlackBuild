@@ -33,7 +33,7 @@ cd $(dirname $0) ; CWD=$(pwd)
 PRGNAM=therock
 SRCNAME=TheRock
 VERSION=${VERSION:-10.1}
-BUILD=${BUILD:-1}
+BUILD=${BUILD:-3}
 TAG=${TAG:-_dhc}	# change to _SBo if accepted by the slackbuild team
 PKGTYPE=${PKGTYPE:-tgz}
 
@@ -75,6 +75,7 @@ PKG=$TMP/package-$PRGNAM
 OUTPUT=${OUTPUT:-/tmp}
 
 set -e
+umask 022
 
 # ---------------------------------------------------------------------------
 # Sanity checks -- fail loud and early, not 40 hours into a build.
@@ -252,8 +253,20 @@ fi
 # Stage into package root: TheRock dist is self-contained -> /opt/rocm
 # (matching upstream convention and AMD's own install location)
 # ---------------------------------------------------------------------------
+_dist_root="$PWD/build/dist/rocm"
 mkdir -p $PKG/opt/rocm
-cp -a build/dist/. $PKG/opt/rocm/
+cp -a build/dist/rocm/. $PKG/opt/rocm/
+
+# Verify staging fidelity: $PKG/opt/rocm must be an exact copy of the dist
+# (run BEFORE the perm/gzip normalization blocks, which mutate the tree)
+_manifest() { find . \( -type f -o -type l \) -printf '%y %p -> %l\n' | sort; }
+( cd "$_dist_root"            && _manifest ) > "$TMP/dist.manifest"
+( cd "$PKG/opt/rocm"          && _manifest ) > "$TMP/pkg.manifest"
+if ! cmp -s "$TMP/dist.manifest" "$TMP/pkg.manifest"; then
+  echo "*** ERROR: staged payload differs from dist:" >&2
+  diff "$TMP/dist.manifest" "$TMP/pkg.manifest" | head -30 >&2
+  exit 1
+fi
 
 # Ownership and permissions. No strip pass: ROCm dists ship prebuilt
 # objects and .kpacks the build system produced itself; stripping files
@@ -270,7 +283,12 @@ find $PKG -type d -exec chmod 755 {} \;
 find $PKG -type f -perm /111 -exec chmod 755 {} \;
 find $PKG -type f ! -perm /111 -exec chmod 644 {} \;
 
-chmod 755 $PKG/opt/rocm/bin/* 2>/dev/null || true
+_bin="$PKG/opt/rocm/bin"
+[ -d "$_bin" ] || { echo "*** ERROR: no bin/ in staged /opt/rocm" >&2; exit 1; }
+
+find "$_bin" -maxdepth 1 -type f ! -perm -u+x \
+  \( -name '*.sh' -o -name 'hipcc*' -o -name 'amdclang*' \) \
+  -exec chmod 755 {} +
 
 # Compress man pages if the dist shipped any (under its own prefix)
 if [ -d $PKG/opt/rocm/man ]; then
@@ -284,13 +302,11 @@ fi
 mkdir -p $PKG/etc/ld.so.conf.d $PKG/etc/profile.d
 cat $CWD/env/rocm.conf > $PKG/etc/ld.so.conf.d/rocm.conf.new
 cat $CWD/env/rocm.sh   > $PKG/etc/profile.d/rocm.sh.new
-cat $CWD/env/rocm.csh  > $PKG/etc/profile.d/rocm.csh.new
 
 # profile.d scripts are only sourced when executable (both /etc/profile
 # and /etc/csh.login gate on -x). The generic 644 normalization pass
 # above ran before this staging, so the bit survives untouched here.
 chmod 755 $PKG/etc/profile.d/rocm.sh.new
-chmod 755 $PKG/etc/profile.d/rocm.csh.new
 
 # Program documentation (under the /usr/doc convention even though the
 # payload lives in /opt/rocm, so pkgtool finds it where slackers expect)
@@ -303,11 +319,52 @@ mkdir -p $PKG/install
 cat $CWD/slack-desc > $PKG/install/slack-desc
 cat $CWD/doinst.sh > $PKG/install/doinst.sh
 
-# Sanity-check the package isn't somehow empty
-if [ -z "$( ls -A $PKG/opt/rocm )" ]; then
-  echo "*** ERROR: staged /opt/rocm is empty; refusing to package nothing." >&2
-  exit 1
-fi
+# ---------------------------------------------------------------------------
+# Final payload contract check. Runs LAST, after everything it audits
+# (payload, env files, doinst.sh) has been staged, so it gates the
+# package right before makepkg instead of mid-assembly.
+# ---------------------------------------------------------------------------
+check_payload() {
+  _miss=0
+  for _must in \
+    lib/libamdhip64.so.7 \
+    lib/libhsa-runtime64.so.1 \
+    lib/librccl.so.1 \
+    bin/hipcc \
+    bin/rocm-smi \
+    bin/rocminfo \
+    lib/llvm/bin/clang \
+    include/hip/hip_runtime.h
+  do
+    [ -e "$PKG/opt/rocm/$_must" ] || {
+      echo "*** ERROR: staged /opt/rocm is missing $_must" >&2
+      _miss=1
+    }
+  done
+
+  # the files doinst.sh promises to resolve must be IN the package
+  for _cfg in \
+    install/doinst.sh \
+    etc/ld.so.conf.d/rocm.conf.new \
+    etc/profile.d/rocm.sh.new
+  do
+    [ -s "$PKG/$_cfg" ] || {   # -s: exists AND non-empty
+      echo "*** ERROR: package is missing or has empty $_cfg" >&2
+      _miss=1
+    }
+  done
+
+  # every lib dir named in rocm.conf must exist in the payload
+  while read -r _dir; do
+    [ -d "$PKG$_dir" ] || {
+      echo "*** ERROR: rocm.conf references $_dir but payload lacks it" >&2
+      _miss=1
+    }
+  done < "$PKG/etc/ld.so.conf.d/rocm.conf.new"
+
+  [ "$_miss" -eq 0 ] || { echo "*** ERROR: payload contract violated; aborting." >&2; exit 1; }
+}
+check_payload
 
 cd $PKG
 /sbin/makepkg -l y -c n $OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE
