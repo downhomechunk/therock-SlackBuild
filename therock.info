@@ -1,0 +1,8 @@
+PRGNAM="TheRock"
+VERSION="10.1"
+HOMEPAGE="https://github.com/ROCm/TheRock"
+DOWNLOAD="https://github.com/ROCm/TheRock/archive/refs/tags/therock-10.1.tar.gz"
+MD5SUM="1fdcafef3cb533c8d755bebb0ec44aba"
+REQUIRES="git-lfs"
+MAINTAINER="James Halloran"
+EMAIL="slackware@dhc.im"

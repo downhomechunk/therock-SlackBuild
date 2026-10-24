@@ -78,10 +78,8 @@ Credits
 -------
 
 This project stands on the shoulders of Condor and his
-ROCm-for-Slackware build scripts, which proved ROCm belonged on
-Slackware at all, and established practices (persistent source
-trees, delta fetching) carried forward here. His prebuilt
-packages served Slackware users before TheRock existed.
+ROCm-for-Slackware build scripts.  His pre-built packages have served
+me well for the past few years.
 
 Additionally, thanks to the upstream TheRock project and AMD for
 making ROCm's build process a single coherent, buildable entity

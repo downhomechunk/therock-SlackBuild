@@ -1,4 +1,4 @@
-therock (The HIP Environment and ROCm Kit) for Slackware
+therock (The HIP Environment and ROCm Kit) for Slackware-current
 
 This builds AMD's ROCm platform for Slackware-current via TheRock,
 AMD's open source build and release system for HIP and ROCm. Since
@@ -7,8 +7,28 @@ wraps that build into a proper Slackware package installing under
 /opt/rocm.
 
 The result is similar in spirit to the excellent ROCm-for-Slackware
-scripts by Condor, whose work made ROCm buildable on Slackware
-in the first place.
+scripts by Condor.
+
+Let's be blunt: building ROCm from source is a massive undertaking.
+We're talking hours to days of compile time depending on your hardware,
+and the disk requirements are genuinely punishing.
+
+Source Cache = 97.6 GiB
+Ccache = 3.0 GiB
+Build tree (peak) = ~120–150 GiB total
+Installed payload (/opt/rocm) = ~25–30 GiB
+
+CPU : Throttle your parallelism. On a 7800X3D we reduced JOBS
+      from the default 8 to 4–6 to avoid memory exhaustion
+
+RAM : 32 GB physical minimum. I used 32 GB zram swap just to
+      get through the build without OOM kills
+
+Disk : Reserve at least 200 GB in /var/cache and build locations
+
+Time : Set aside a full day or weekend. Don't start Friday evening
+       unless you enjoy watching ninja crawl at 3 AM
+
 
 IMPORTANT: THIS SCRIPT REQUIRES NETWORK ACCESS WHILE RUNNING.
 TheRock downloads component sources, toolchains, and dependency
@@ -16,10 +36,11 @@ archives from the internet at build time. This script is NOT
 suitable for air-gapped or restricted machines. Sources are cached
 persistently in $SRC_CACHE (default ~/.cache/therock-src) so
 subsequent builds and version bumps fetch only deltas.
+Think on how you feel about this before running.
 
 REQUIREMENTS
-  git-lfs is a HARD REQUIREMENT.  After installing git-lfs,
-  run 'git lfs install' once as the user
+  git-lfs is a HARD REQUIREMENT (available on SBo).
+  After installing git-lfs, run 'git lfs install' once as the user
   running the build (one-time global git config setup).
 
 USAGE
