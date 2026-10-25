@@ -74,8 +74,8 @@ USE_CCACHE=yes ./therock.SlackBuild
 - - -
 ## Usage
 
-Default build targets `gfx120X-all` (RDNA4: gfx1200 + gfx1201), covering the RX
-9060 / 9070 series and Radeon AI PRO R9700.
+  Default build targets gfx1201 (RDNA4, Navi 48: RX 9070 / 9070 XT /
+  9070 GRE and Radeon AI PRO R9700).  To target an exact architecture:
 
 To target an exact architecture only:
 
