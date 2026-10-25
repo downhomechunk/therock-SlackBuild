@@ -77,7 +77,7 @@ USE_CCACHE=yes ./therock.SlackBuild
   Default build targets gfx1201 (RDNA4, Navi 48: RX 9070 / 9070 XT /
   9070 GRE and Radeon AI PRO R9700).  To target an exact architecture:
 
-To target an exact architecture only:
+To target an exact architecture:
 
 ```sh
 GPU_FAMILIES=gfx1201 ./therock.SlackBuild   # 9070 / 9070 XT
