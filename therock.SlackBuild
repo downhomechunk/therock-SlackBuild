@@ -320,6 +320,10 @@ cat $CWD/env/rocm.sh   > $PKG/etc/profile.d/rocm.sh.new
 # above ran before this staging, so the bit survives untouched here.
 chmod 755 $PKG/etc/profile.d/rocm.sh.new
 
+# csh variant for tcsh users
+cat $CWD/env/rocm.csh > $PKG/etc/profile.d/rocm.csh.new
+chmod 755 $PKG/etc/profile.d/rocm.csh.new
+
 # Program documentation (under the /usr/doc convention even though the
 # payload lives in /opt/rocm, so pkgtool finds it where slackers expect)
 PKGDOC=$PKG/usr/doc/$PRGNAM-$VERSION
