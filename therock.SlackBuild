@@ -33,7 +33,7 @@ cd $(dirname $0) ; CWD=$(pwd)
 PRGNAM=therock
 SRCNAME=TheRock
 VERSION=${VERSION:-10.1}
-BUILD=${BUILD:-3}
+BUILD=${BUILD:-5}
 TAG=${TAG:-_dhc}	# change to _SBo if accepted by the slackbuild team
 PKGTYPE=${PKGTYPE:-tgz}
 
@@ -62,12 +62,21 @@ export CMAKE_BUILD_PARALLEL_LEVEL=$JOBS
 # exact targets for leaner builds.
 GPU_FAMILIES=${GPU_FAMILIES:-gfx120X-all}
 
+# Flavor rides in the tag region: opaque to pkgtools' version comparison,
+# but grep-able and human-readable. Semicolons become underscores.
+GPU_FLAVOR=$(printf '%s' "$GPU_FAMILIES" | tr ';' '_')
+TAG=${TAG:-_dhc}
+# Append GPU flavor to TAG for disambiguation
+TAG="_${GPU_FLAVOR}${TAG}"
+
 # Optional ccache acceleration: Opt-in, off unless asked for.
 use_ccache="" ; [ "${USE_CCACHE:-no}" != "no" ] && use_ccache="yes"
 
 if [ ! -z "${PRINT_PACKAGE_NAME}" ]; then
   echo "$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"
-  exit 0
+  echo "=> GPU flavor for package name: $GPU_FLAVOR"
+  echo "=> Package will be named: $PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"
+exit 0
 fi
 
 TMP=${TMP:-/tmp/SBo}
