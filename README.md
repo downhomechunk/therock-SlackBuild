@@ -7,6 +7,13 @@ source build and release system for HIP and ROCm. Since ROCm 7.14, ROCm is
 built and released through TheRock; this script wraps that build into a proper
 Slackware package installing under `/opt/rocm`.
 
+Don't want to build?  Just want a package?  Here you go (temporary home):
+
+<https://dhc.im/share/therock-10.1-x86_64-5_gfx110X-all_gfx120X-all_dhc.tgz>
+[]()
+
+[md5sum: ]()`8b51e1c98f05b103a15bf75e87f6d7ff`
+
 - - -
 ## ⚠️ The Build Is Brutal — Plan Accordingly
 
@@ -74,8 +81,8 @@ USE_CCACHE=yes ./therock.SlackBuild
 - - -
 ## Usage
 
-  Default build targets gfx1201 (RDNA4, Navi 48: RX 9070 / 9070 XT /
-  9070 GRE and Radeon AI PRO R9700).  To target an exact architecture:
+Default build targets gfx1201 (RDNA4, Navi 48: RX 9070 / 9070 XT / 9070 GRE and
+Radeon AI PRO R9700).  To target an exact architecture:
 
 To target an exact architecture:
 
