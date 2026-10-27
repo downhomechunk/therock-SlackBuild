@@ -33,7 +33,7 @@ cd $(dirname $0) ; CWD=$(pwd)
 PRGNAM=therock
 SRCNAME=TheRock
 VERSION=${VERSION:-10.1}
-BUILD=${BUILD:-5}
+BUILD=${BUILD:-6}
 TAG=${TAG:-_dhc}	# change to _SBo if accepted by the slackbuild team
 PKGTYPE=${PKGTYPE:-tgz}
 
@@ -294,6 +294,12 @@ find $PKG -type d -exec chmod 755 {} \;
 # bin/ (libexec helpers, *.py wrappers invoked by path).
 find $PKG -type f -perm /111 -exec chmod 755 {} \;
 find $PKG -type f ! -perm /111 -exec chmod 644 {} \;
+
+# Shared libraries are conventionally 755 (matches Slackware's own
+# /usr/lib64 solibs and AMD's official packages). Subproject builds are
+# inconsistent about the exec bit, so normalize explicitly rather than
+# trusting the generic pass above.
+find $PKG/opt/rocm -type f \( -name '*.so' -o -name '*.so.*' \) -exec chmod 755 {} \;
 
 _bin="$PKG/opt/rocm/bin"
 [ -d "$_bin" ] || { echo "*** ERROR: no bin/ in staged /opt/rocm" >&2; exit 1; }

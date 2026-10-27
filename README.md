@@ -9,7 +9,7 @@ Slackware package installing under `/opt/rocm`.
 
 Don't want to build?  Just want a package?  Here you go (temporary home):
 
-<https://dhc.im/share/therock-10.1-x86_64-5_gfx110X-all_gfx120X-all_dhc.tgz>
+<https://dhc.im/share/therock-10.1-x86_64-6_gfx110X-all_gfx120X-all_dhc.tgz>
 []()
 
 [md5sum: ]()`8b51e1c98f05b103a15bf75e87f6d7ff`
